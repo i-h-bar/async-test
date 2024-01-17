@@ -1,12 +1,12 @@
-from async_test import skip_test
+from async_test import skip
 
 
-async def another_test_function():
-    """I have a description"""
-    print("another_test_function")
+async def test_error():
+    """This test should error"""
+    assert 1 + "2" == 3
 
 
-@skip_test("skip_test")
+@skip("This test is broken")
 async def test_skip():
-    """I have a description"""
-    print("You ran a skipped test")
+    """This test should be skipped"""
+    raise TypeError("This test is broken")

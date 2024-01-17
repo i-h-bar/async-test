@@ -25,11 +25,15 @@ class AsyncTestWrapper:
         """
         self.test = test
         self.name = name
-        self.timeout = test_run.test_timeout_s
+        self.test_run = test_run
+        self.timeout = self.test_run.test_timeout_s
         self.description = inspect.getdoc(test)
         self.result: str | None = None
         self.traceback: str | None = None
         self.duration: str | None = None
+
+    def __hash__(self):
+        return hash((self.test, self.name, self.test_run, self.timeout, self.description))
 
     def __repr__(self):
         return f"AsyncTestWrapper({self.name})"
@@ -48,19 +52,24 @@ class AsyncTestWrapper:
             except SkippedTestError:
                 self.result = "Skipped"
                 self.traceback = traceback.format_exc()
+                self.test_run.skipped.append(self)
             except (asyncio.TimeoutError, asyncio.CancelledError):
                 coroutine.close()
                 self.result = "Error"
                 self.traceback = traceback.format_exc()
+                self.test_run.errors.append(self)
             except AssertionError:
                 self.result = "Failed"
                 self.traceback = traceback.format_exc()
+                self.test_run.failures.append(self)
             except Exception:
                 self.result = "Error"
                 self.traceback = traceback.format_exc()
+                self.test_run.errors.append(self)
             else:
                 self.result = "Passed"
                 self.traceback = ""
+                self.test_run.passed.append(self)
             finally:
                 self.duration = time.time() - start
 
@@ -70,8 +79,8 @@ class AsyncTestWrapper:
 class TestRunner:
     def __init__(self, test_dirs: Sequence[Path], test_indicator: str = "test", test_timeout_s: int = 600):
         """
-        An object that takes a sequence of directories; finds all mock_tests contained within that have the test_indicator
-        and runs them concurrently
+        An object that takes a sequence of directories; finds all mock_tests contained within that have the
+        test_indicator and runs them concurrently
 
         :param test_dirs: Sequence[Path]
                 A sequence of paths to directories of mock_tests or test cases
@@ -137,6 +146,7 @@ if __name__ == "__main__":
     async def main():
         test_runner = TestRunner([Path("../mock_tests")], test_indicator="mock")
         await test_runner.run()
+        x = 0
 
 
     asyncio.run(main())

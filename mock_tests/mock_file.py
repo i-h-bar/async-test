@@ -1,13 +1,11 @@
 import asyncio
 
 
-async def test_stuff_function():
-    """I have a description"""
-    print("I have tested stuff")
+async def test_pass():
+    """This test should pass"""
+    assert 2 == 2
 
 
-async def test_stuff_async():
-    """I have a description"""
-    print("I tested other stuff")
-    await asyncio.sleep(1)
-    print("I waited")
+async def test_fail():
+    """This test should fail"""
+    assert 1 == 2
