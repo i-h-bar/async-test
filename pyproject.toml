@@ -3,10 +3,12 @@ name = "async_test"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.10"
 dependencies = []
-license = { text = "" }
 
+[tool.maturin]
+python-source = "python"
+module-name = "async_test.async_test"
 
 [build-system]
 requires = ["maturin>=1.0,<2.0"]

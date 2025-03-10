@@ -1,15 +1,16 @@
-use pyo3::{pyfunction, pymodule, wrap_pyfunction, PyResult, Python};
-use pyo3::types::PyModule;
+use pyo3::prelude::*;
+use pyo3::wrap_pyfunction;
 
 #[pyfunction]
-pub fn add(left: u64, right: u64) -> u64 {
-    left + right
+/// Formats the sum of two numbers as string.
+fn add(a: usize, b: usize) -> PyResult<usize> {
+    Ok(a + b)
 }
 
-
 #[pymodule]
-fn async_test(py: Python, m: &PyModule) -> PyResult<()> {
-    m.add_wrapped(wrap_pyfunction!(add))?;
+/// A Python module implemented in Rust.
+fn async_test(m: &Bound<'_, PyModule>) -> PyResult<()> {
+    m.add_function(wrap_pyfunction!(add, m)?)?;
 
     Ok(())
 }
@@ -20,7 +21,7 @@ mod tests {
 
     #[test]
     fn it_works() {
-        let result = add(2, 2);
+        let result = add(2, 2).unwrap();
         assert_eq!(result, 4);
     }
 }
