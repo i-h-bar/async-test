@@ -1,8 +1,10 @@
+mod loader;
 mod search;
+mod stats;
 
+use crate::search::Tests;
 use pyo3::prelude::*;
 use pyo3::wrap_pyfunction;
-use crate::search::Tests;
 
 #[pyfunction]
 fn main(path: String) -> PyResult<Vec<String>> {
@@ -11,7 +13,6 @@ fn main(path: String) -> PyResult<Vec<String>> {
 }
 
 #[pymodule]
-/// A Python module implemented in Rust.
 fn async_test(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(main, m)?)?;
 
