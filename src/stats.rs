@@ -1,3 +1,4 @@
+use crate::results::{Outcome, TestResult};
 
 #[derive(Debug)]
 pub struct Stats {
@@ -21,11 +22,11 @@ impl Stats {
         }
     }
 
-    pub fn passed(&mut self) {
-        self.passed += 1;
-    }
-
-    pub fn failed(&mut self) {
-        self.failed += 1;
+    pub fn update(&mut self, result: TestResult) {
+        match result.outcome {
+            Outcome::PASSED => self.passed += 1,
+            Outcome::FAILED => self.failed += 1,
+            Outcome::ERRORED => self.errored += 1,
+        }
     }
 }

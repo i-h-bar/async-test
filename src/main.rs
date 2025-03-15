@@ -9,6 +9,7 @@ use std::sync::Arc;
 mod search;
 mod stats;
 mod test;
+pub mod results;
 
 #[pyo3_async_runtimes::tokio::main]
 async fn main() -> PyResult<()> {

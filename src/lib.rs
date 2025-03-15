@@ -2,6 +2,8 @@ mod search;
 mod stats;
 mod test;
 
+mod results;
+
 use pyo3::prelude::*;
 
 
