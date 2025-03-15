@@ -6,6 +6,7 @@ use pyo3::{PyResult, Python};
 use std::ops::{DerefMut};
 use std::path::PathBuf;
 use std::sync::Arc;
+use pyo3::ffi::c_str;
 use crate::results::{Outcome, TestResult};
 
 fn modularise(path: PathBuf) -> PyResult<String> {
@@ -39,7 +40,16 @@ pub async fn run_test(path: PathBuf, stats: Arc<Mutex<Stats>>) -> PyResult<()> {
         Err(error) => {
             Python::with_gil(|py|  {
                 if error.is_instance_of::<PyAssertionError>(py) {
-                    TestResult { name, outcome: Outcome::FAILED, message: error.to_string(), tb: error.traceback(py).unwrap().to_string() }
+                    let tb = if let Some(tb) = error.traceback(py) {
+                        if let Ok(tb) = tb.format() {
+                            tb
+                        } else {
+                            "".to_string()
+                        }
+                    } else {
+                        "".to_string()
+                    };
+                    TestResult { name, outcome: Outcome::FAILED, message: error.to_string(), tb }
                 } else {
                     TestResult { name, outcome: Outcome::ERRORED, message: error.to_string(), tb: error.traceback(py).unwrap().to_string() }
                 }
