@@ -1,22 +1,5 @@
-use std::sync::mpsc::{channel, Sender};
-use std::sync::Arc;
-use std::{fs, thread};
-use std::path::{Path, PathBuf};
 use futures::future;
-
-pub struct Tests {
-    tests: Vec<String>,
-}
-
-impl Tests {
-    pub fn find(dir: String) -> Self {
-        todo!()
-    }
-
-    pub fn tests(&self) -> &Vec<String> {
-        &self.tests
-    }
-}
+use std::path::PathBuf;
 
 pub async fn async_search(path: PathBuf) -> Vec<PathBuf> {
     let mut tests = Vec::new();
@@ -29,7 +12,11 @@ pub async fn async_search(path: PathBuf) -> Vec<PathBuf> {
                     let path = entry.path();
                     sub_dirs.push(async_search(path));
                 } else if file_type.is_file() {
-                    tests.push(entry.path())
+                    if let Some(name) = entry.file_name().to_str() {
+                        if name.contains("test") && name.ends_with(".py") {
+                            tests.push(entry.path())
+                        }
+                    };
                 }
             }
         }
