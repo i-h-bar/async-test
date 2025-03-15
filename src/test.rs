@@ -23,7 +23,7 @@ impl Test {
     }
 
     pub async fn run(self) -> PyResult<()> {
-        // self.test.await?;
+        self.test.await?;
 
         Ok(())
     }

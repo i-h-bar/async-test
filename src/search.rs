@@ -1,6 +1,8 @@
 use std::sync::mpsc::{channel, Sender};
 use std::sync::Arc;
 use std::{fs, thread};
+use std::path::{Path, PathBuf};
+use futures::future;
 
 pub struct Tests {
     tests: Vec<String>,
@@ -8,16 +10,7 @@ pub struct Tests {
 
 impl Tests {
     pub fn find(dir: String) -> Self {
-        let (tx, rx) = channel();
-        let mut tests = Vec::new();
-        let tx = Arc::new(tx);
-        thread::spawn(move || search_directory(dir, Arc::clone(&tx)));
-
-        for test in rx {
-            tests.push(test);
-        }
-
-        Self { tests }
+        todo!()
     }
 
     pub fn tests(&self) -> &Vec<String> {
@@ -25,21 +18,26 @@ impl Tests {
     }
 }
 
-fn search_directory(path: String, tx: Arc<Sender<String>>) -> () {
-    if let Ok(path) = fs::read_dir(path) {
-        for entry in path {
-            if let Ok(entry) = entry {
-                if let Ok(file_type) = entry.file_type() {
-                    if file_type.is_dir() {
-                        let copy = Arc::clone(&tx);
-                        thread::spawn(move || {
-                            search_directory(entry.path().to_str().unwrap().to_string(), copy)
-                        });
-                    } else if file_type.is_file() {
-                        tx.send(entry.path().to_str().unwrap().to_string()).unwrap();
-                    }
+pub async fn async_search(path: PathBuf) -> Vec<PathBuf> {
+    let mut tests = Vec::new();
+
+    if let Ok(mut path) = tokio::fs::read_dir(path).await {
+        let mut sub_dirs = Vec::new();
+        while let Ok(Some(entry)) = path.next_entry().await {
+            if let Ok(file_type) = entry.file_type().await {
+                if file_type.is_dir() {
+                    let path = entry.path();
+                    sub_dirs.push(async_search(path));
+                } else if file_type.is_file() {
+                    tests.push(entry.path())
                 }
             }
         }
+
+        for test in future::join_all(sub_dirs).await.into_iter().flatten() {
+            tests.push(test);
+        }
     }
+
+    tests
 }

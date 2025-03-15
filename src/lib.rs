@@ -1,4 +1,4 @@
-mod loader;
+mod test;
 mod search;
 mod stats;
 

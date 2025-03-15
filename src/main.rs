@@ -1,21 +1,18 @@
-use crate::loader::Test;
+use std::path::{Path, PathBuf};
+use std::sync::Arc;
+use crate::test::Test;
 use crate::stats::Stats;
 use pyo3::prelude::*;
 
-mod loader;
+mod test;
 mod stats;
+mod search;
 
 #[pyo3_async_runtimes::tokio::main]
 async fn main() -> PyResult<()> {
-    Python::with_gil(|py| {
-        let syspath = py.import("sys").unwrap().getattr("path").unwrap();
+    let tests = search::async_search(PathBuf::from("./")).await;
 
-        syspath.call_method1("append", ("./",)).unwrap();
-    });
-
-    let stats = Stats::new();
-    let test = Test::new("mock_tests.test_file", stats)?;
-    test.run().await?;
+    println!("{:#?}", tests.len());
 
     Ok(())
 }
