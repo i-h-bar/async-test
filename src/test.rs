@@ -27,6 +27,7 @@ fn modularise(path: PathBuf) -> PyResult<String> {
 
 pub async fn run_test(path: PathBuf, stats: Arc<Mutex<Stats>>) -> PyResult<()> {
     let module_name = modularise(path)?;
+    let name = module_name.split(".").last().unwrap().to_string();
 
     let test = Python::with_gil(|py| {
         let coroutine = py.import(module_name)?;
@@ -34,13 +35,13 @@ pub async fn run_test(path: PathBuf, stats: Arc<Mutex<Stats>>) -> PyResult<()> {
     })?;
 
     let result = match test.await {
-        Ok(_) => TestResult { outcome: Outcome::PASSED, message: "".to_string() },
+        Ok(_) => TestResult { name, outcome: Outcome::PASSED, message: "".to_string(), tb: "".to_string() },
         Err(error) => {
             Python::with_gil(|py|  {
                 if error.is_instance_of::<PyAssertionError>(py) {
-                    TestState::FAILED
+                    TestResult { name, outcome: Outcome::FAILED, message: error.to_string(), tb: error.traceback(py).unwrap().to_string() }
                 } else {
-                    TestState::ERRORED
+                    TestResult { name, outcome: Outcome::ERRORED, message: error.to_string(), tb: error.traceback(py).unwrap().to_string() }
                 }
             })
         },
