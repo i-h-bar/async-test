@@ -1,10 +1,8 @@
-
 pub enum Outcome {
     PASSED,
     FAILED,
     ERRORED,
 }
-
 
 pub struct TestResult {
     pub name: String,

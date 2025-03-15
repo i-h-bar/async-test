@@ -2,12 +2,12 @@ use crate::results::{Outcome, TestResult};
 
 #[derive(Debug)]
 pub struct Stats {
-    total: usize,
-    passed: Vec<String>,
-    failed: Vec<(String, String, String)>,
-    errored: Vec<(String, String, String)>,
-    skipped: Vec<(String, String, String)>,
-    timeout: Vec<(String, String, String)>,
+    pub total: usize,
+    pub passed: Vec<String>,
+    pub failed: Vec<(String, String, String)>,
+    pub errored: Vec<(String, String, String)>,
+    pub skipped: Vec<(String, String, String)>,
+    pub timeout: Vec<(String, String, String)>,
 }
 
 impl Stats {
@@ -26,7 +26,7 @@ impl Stats {
         match result.outcome {
             Outcome::PASSED => self.passed.push(result.name),
             Outcome::FAILED => self.failed.push((result.name, result.message, result.tb)),
-            Outcome::ERRORED => self.failed.push((result.name, result.message, result.tb)),
+            Outcome::ERRORED => self.errored.push((result.name, result.message, result.tb)),
         }
     }
 }
