@@ -1,15 +1,17 @@
+use std::collections::HashMap;
 use crate::results::{Outcome, TestResult};
 use crate::stats::Stats;
 use futures::lock::Mutex;
-use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
+use indicatif::{MultiProgress, ProgressBar};
 use pyo3::exceptions::{PyAssertionError, PyException};
 use pyo3::prelude::*;
 use pyo3::{PyResult, Python};
 use std::ops::DerefMut;
 use std::path::PathBuf;
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
+use pyo3::ffi::getter;
+use pyo3::types::PyDict;
 
 pub fn modularise(path: PathBuf) -> PyResult<String> {
     if let Some(name) = path.to_str() {
@@ -46,6 +48,18 @@ pub async fn run_test(
 
     let test = Python::with_gil(|py| {
         let module = py.import(module)?;
+        let tests: Vec<String> = module
+            .getattr("__dict__")?
+            .try_iter()?
+            .into_iter()
+            .filter_map(| item | {
+                let item = item.ok()?.extract::<String>().ok()?;
+                if item.starts_with("test") {
+                    Some(item)
+                } else {
+                    None
+                }
+            } ).collect();
         pyo3_async_runtimes::tokio::into_future(module.call_method0("test_case")?)
     });
 
