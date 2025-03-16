@@ -47,31 +47,39 @@ pub async fn run_test(
     let test = Python::with_gil(|py| {
         let module = py.import(module)?;
         pyo3_async_runtimes::tokio::into_future(module.call_method0("test_case")?)
-    })?;
+    });
 
-    let result = match test.await {
-        Ok(_) => TestResult {
-            name,
-            outcome: Outcome::PASSED,
-            message: None,
-            tb: None,
+    let result = match test {
+        Ok(test) => match test.await {
+            Ok(_) => TestResult {
+                name,
+                outcome: Outcome::PASSED,
+                message: None,
+                tb: None,
+            },
+            Err(error) => Python::with_gil(|py| {
+                if error.is_instance_of::<PyAssertionError>(py) {
+                    TestResult {
+                        name,
+                        outcome: Outcome::FAILED,
+                        message: Some(error.to_string()),
+                        tb: extract_tb(&error, py),
+                    }
+                } else {
+                    TestResult {
+                        name,
+                        outcome: Outcome::ERRORED,
+                        message: Some(error.to_string()),
+                        tb: extract_tb(&error, py),
+                    }
+                }
+            }),
         },
-        Err(error) => Python::with_gil(|py| {
-            if error.is_instance_of::<PyAssertionError>(py) {
-                TestResult {
-                    name,
-                    outcome: Outcome::FAILED,
-                    message: Some(error.to_string()),
-                    tb: extract_tb(&error, py),
-                }
-            } else {
-                TestResult {
-                    name,
-                    outcome: Outcome::ERRORED,
-                    message: Some(error.to_string()),
-                    tb: extract_tb(&error, py),
-                }
-            }
+        Err(error) => Python::with_gil(|py| TestResult {
+            name,
+            outcome: Outcome::ERRORED,
+            message: Some(error.to_string()),
+            tb: extract_tb(&error, py),
         }),
     };
 
