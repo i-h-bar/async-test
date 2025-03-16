@@ -7,6 +7,6 @@ pub enum Outcome {
 pub struct TestResult {
     pub name: String,
     pub outcome: Outcome,
-    pub message: String,
-    pub tb: String,
+    pub message: Option<String>,
+    pub tb: Option<String>,
 }

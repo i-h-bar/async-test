@@ -2,7 +2,6 @@ use crate::results::{Outcome, TestResult};
 use crate::stats::Stats;
 use futures::lock::Mutex;
 use pyo3::exceptions::{PyAssertionError, PyException};
-use pyo3::ffi::c_str;
 use pyo3::prelude::*;
 use pyo3::{PyResult, Python};
 use std::ops::DerefMut;
@@ -25,16 +24,8 @@ fn modularise(path: PathBuf) -> PyResult<String> {
     }
 }
 
-fn extract_tb(error: &PyErr, py: Python) -> String {
-    if let Some(tb) = error.traceback(py) {
-        if let Ok(tb) = tb.format() {
-            tb
-        } else {
-            "Failed to extract traceback".to_string()
-        }
-    } else {
-        "Failed to extract traceback".to_string()
-    }
+fn extract_tb(error: &PyErr, py: Python) -> Option<String> {
+    error.traceback(py)?.format().ok()
 }
 
 pub async fn run_test(path: PathBuf, stats: Arc<Mutex<Stats>>) -> PyResult<()> {
@@ -42,30 +33,30 @@ pub async fn run_test(path: PathBuf, stats: Arc<Mutex<Stats>>) -> PyResult<()> {
     let name = module_name.split(".").last().unwrap().to_string();
 
     let test = Python::with_gil(|py| {
-        let coroutine = py.import(module_name)?;
-        pyo3_async_runtimes::tokio::into_future(coroutine.call_method0("test_case")?)
+        let module = py.import(module_name)?;
+        pyo3_async_runtimes::tokio::into_future(module.call_method0("test_case")?)
     })?;
 
     let result = match test.await {
         Ok(_) => TestResult {
             name,
             outcome: Outcome::PASSED,
-            message: "".to_string(),
-            tb: "".to_string(),
+            message: None,
+            tb: None,
         },
         Err(error) => Python::with_gil(|py| {
             if error.is_instance_of::<PyAssertionError>(py) {
                 TestResult {
                     name,
                     outcome: Outcome::FAILED,
-                    message: error.to_string(),
+                    message: Some(error.to_string()),
                     tb: extract_tb(&error, py),
                 }
             } else {
                 TestResult {
                     name,
                     outcome: Outcome::ERRORED,
-                    message: error.to_string(),
+                    message: Some(error.to_string()),
                     tb: extract_tb(&error, py),
                 }
             }
