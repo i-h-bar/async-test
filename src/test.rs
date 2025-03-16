@@ -34,26 +34,11 @@ fn extract_tb(error: &PyErr, py: Python) -> Option<String> {
 pub async fn run_test(path: PathBuf, stats: Arc<Mutex<Stats>>, multi_bar: &MultiProgress) -> PyResult<()> {
     let module_name = modularise(path)?;
     let name = module_name.split(".").last().unwrap().to_string();
-
-    let running = Arc::new(AtomicBool::new(true));
-    let running_clone = Arc::clone(&running);
+    let name_clone = name.clone();
 
     let bar = multi_bar.add(ProgressBar::new_spinner());
-    bar.set_message(format!("{} Running...", &name));
-
-    let handle = tokio::spawn(async move {
-        loop {
-            bar.tick();
-
-            if running_clone.load(Ordering::Relaxed) {
-                tokio::time::sleep(Duration::from_millis(100)).await;
-            } else {
-                break
-            }
-        }
-
-        bar
-    });
+    bar.set_message(name_clone);
+    bar.enable_steady_tick(Duration::from_millis(100));
 
     let test = Python::with_gil(|py| {
         let module = py.import(module_name)?;
@@ -86,10 +71,18 @@ pub async fn run_test(path: PathBuf, stats: Arc<Mutex<Stats>>, multi_bar: &Multi
         }),
     };
 
-    running.swap(false, Ordering::Relaxed);
-    let bar = handle.await.unwrap();
+    let indicator = match result.outcome {
+        Outcome::PASSED => "\u{2705}",
+        Outcome::ERRORED => "\u{1F6AB}",
+        _ => "\u{274c}"
+    };
 
-    bar.set_message(format!("{} finished", &result.name));
+    let reason = match &result.message {
+        Some(reason) => reason,
+        None => ""
+    };
+
+    bar.set_message(format!("{} - {}   {}", &result.name, indicator, reason));
     bar.finish();
     stats.lock().await.deref_mut().update(result);
 

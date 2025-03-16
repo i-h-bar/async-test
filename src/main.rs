@@ -26,6 +26,7 @@ async fn main() -> PyResult<()> {
     });
 
     let tests = search::async_search(PathBuf::from("./")).await;
+
     let stats = Arc::new(Mutex::new(Stats::new(tests.len())));
 
     let multi_bar = MultiProgress::new();
@@ -36,7 +37,5 @@ async fn main() -> PyResult<()> {
             .map(|test| run_test(test, Arc::clone(&stats), &multi_bar)),
     )
     .await?;
-
-    println!("{:#?}", stats.lock().await.deref());
     Ok(())
 }
