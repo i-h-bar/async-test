@@ -33,7 +33,7 @@ fn extract_tb(error: &PyErr, py: Python) -> Option<String> {
     error.traceback(py)?.format().ok()
 }
 
-pub async fn run_test(
+pub async fn run_module(
     module: String,
     stats: Arc<Mutex<Stats>>,
     multi_bar: &MultiProgress,

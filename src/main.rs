@@ -1,5 +1,5 @@
 use crate::stats::Stats;
-use crate::test::{modularise, run_test};
+use crate::test::{modularise, run_module};
 use futures::lock::Mutex;
 use indicatif::{MultiProgress, ProgressBar};
 use pyo3::prelude::*;
@@ -44,7 +44,7 @@ async fn main() -> PyResult<()> {
     futures::future::try_join_all(
         tests
             .into_iter()
-            .map(|test| run_test(test, Arc::clone(&stats), &multi_bar, longest_name)),
+            .map(|test| run_module(test, Arc::clone(&stats), &multi_bar, longest_name)),
     )
     .await?;
     Ok(())
