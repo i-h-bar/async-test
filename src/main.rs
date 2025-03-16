@@ -1,11 +1,11 @@
 use crate::stats::Stats;
-use crate::test::run_test;
+use crate::test::{modularise, run_test};
 use futures::lock::Mutex;
+use indicatif::{MultiProgress, ProgressBar};
 use pyo3::prelude::*;
 use std::ops::Deref;
 use std::path::PathBuf;
 use std::sync::Arc;
-use indicatif::{MultiProgress, ProgressBar};
 
 pub mod results;
 mod search;
@@ -25,7 +25,17 @@ async fn main() -> PyResult<()> {
             .call1(("./",));
     });
 
-    let tests = search::async_search(PathBuf::from("./")).await;
+    let tests: Vec<String> = search::async_search(PathBuf::from("./"))
+        .await
+        .into_iter()
+        .filter_map(|path| modularise(path).ok())
+        .collect();
+
+    let longest_name = tests
+        .iter()
+        .map(|module| module.split(".").last().unwrap().len())
+        .max()
+        .unwrap();
 
     let stats = Arc::new(Mutex::new(Stats::new(tests.len())));
 
@@ -34,7 +44,7 @@ async fn main() -> PyResult<()> {
     futures::future::try_join_all(
         tests
             .into_iter()
-            .map(|test| run_test(test, Arc::clone(&stats), &multi_bar)),
+            .map(|test| run_test(test, Arc::clone(&stats), &multi_bar, longest_name)),
     )
     .await?;
     Ok(())

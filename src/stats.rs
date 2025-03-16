@@ -27,12 +27,16 @@ impl Stats {
             Outcome::PASSED => self.passed.push(result.name),
             Outcome::FAILED => self.failed.push((
                 result.name,
-                result.message.unwrap_or_else(|| "Failed to get error".to_string()),
+                result
+                    .message
+                    .unwrap_or_else(|| "Failed to get error".to_string()),
                 result.tb.unwrap_or_else(|| "Failed to get tb".to_string()),
             )),
             Outcome::ERRORED => self.errored.push((
                 result.name,
-                result.message.unwrap_or_else(|| "Failed to get error".to_string()),
+                result
+                    .message
+                    .unwrap_or_else(|| "Failed to get error".to_string()),
                 result.tb.unwrap_or_else(|| "Failed to get tb".to_string()),
             )),
         }
