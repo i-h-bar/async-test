@@ -5,6 +5,7 @@ use pyo3::prelude::*;
 use std::ops::Deref;
 use std::path::PathBuf;
 use std::sync::Arc;
+use indicatif::{MultiProgress, ProgressBar};
 
 pub mod results;
 mod search;
@@ -27,14 +28,15 @@ async fn main() -> PyResult<()> {
     let tests = search::async_search(PathBuf::from("./")).await;
     let stats = Arc::new(Mutex::new(Stats::new(tests.len())));
 
+    let multi_bar = MultiProgress::new();
+
     futures::future::try_join_all(
         tests
             .into_iter()
-            .map(|test| run_test(test, Arc::clone(&stats))),
+            .map(|test| run_test(test, Arc::clone(&stats), &multi_bar)),
     )
     .await?;
 
     println!("{:#?}", stats.lock().await.deref());
-
     Ok(())
 }
