@@ -11,14 +11,14 @@ pub struct Stats {
 }
 
 impl Stats {
-    pub fn new(total: usize) -> Self {
+    pub fn new() -> Self {
         Self {
-            total,
-            passed: Vec::with_capacity(total),
-            failed: Vec::with_capacity(total),
-            errored: Vec::with_capacity(total),
-            skipped: Vec::with_capacity(total),
-            timeout: Vec::with_capacity(total),
+            total: 0,
+            passed: Vec::new(),
+            failed: Vec::new(),
+            errored: Vec::new(),
+            skipped: Vec::new(),
+            timeout: Vec::new(),
         }
     }
 

@@ -1,15 +1,19 @@
 use crate::stats::Stats;
-use crate::test::{modularise, run_module};
+use crate::module::{modularise, run_module};
 use futures::lock::Mutex;
 use indicatif::MultiProgress;
 use pyo3::prelude::*;
 use std::path::PathBuf;
 use std::sync::Arc;
+use crate::runner::SuiteRunner;
 
 pub mod results;
 mod search;
 mod stats;
+mod module;
 mod test;
+
+mod runner;
 
 #[pyo3_async_runtimes::tokio::main]
 async fn main() -> PyResult<()> {
@@ -30,20 +34,19 @@ async fn main() -> PyResult<()> {
         .filter_map(|path| modularise(path).ok())
         .collect();
 
-    let longest_name = tests
-        .iter()
-        .map(|module| module.split(".").last().unwrap().len())
-        .max()
-        .unwrap();
+    // let longest_name = tests
+    //     .iter()
+    //     .map(|module| module.split(".").last().unwrap().len())
+    //     .max()
+    //     .unwrap();
 
-    let stats = Arc::new(Mutex::new(Stats::new(tests.len())));
 
-    let multi_bar = MultiProgress::new();
+    let suite = SuiteRunner::new();
 
     futures::future::try_join_all(
         tests
             .into_iter()
-            .map(|test| run_module(test, Arc::clone(&stats), &multi_bar, longest_name)),
+            .map(|test| run_module(test, &suite)),
     )
     .await?;
     Ok(())
