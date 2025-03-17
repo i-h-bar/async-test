@@ -30,7 +30,8 @@ impl SuiteRunner {
 
     pub async fn run_test(&self, test: Test){
         let bar = self.progress_bar.add(ProgressBar::new_spinner());
-        bar.set_message(test.name.clone());
+        let name = format!("{}: {}", test.module_name, test.name.clone());
+        bar.set_message(name.clone());
         bar.enable_steady_tick(Duration::from_millis(100));
         if test.name.len() > self.longest_name.load(Ordering::Relaxed) {
             self.longest_name.swap(test.name.len(), Ordering::Relaxed);
@@ -49,7 +50,7 @@ impl SuiteRunner {
 
         bar.set_message(format!(
             "{}{}{} - {}   {}\x1b[0m",
-            colour, &result.name, padding, indicator, reason
+            colour, &name, padding, indicator, reason
         ));
         bar.finish();
         self.stats.lock().await.deref_mut().update(result);
@@ -75,8 +76,6 @@ impl SuiteRunner {
             Some(reason) => reason,
             None => "",
         };
-
-
 
         let padding_size = self.longest_name.load(Ordering::Relaxed) - result.name.len();
         let padding = (0..padding_size).map(|_| " ").collect::<String>();

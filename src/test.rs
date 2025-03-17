@@ -6,12 +6,13 @@ use crate::results::{Outcome, TestResult};
 
 pub struct Test {
     pub name: String,
+    pub module_name: String,
     test: Pin<Box<dyn Future<Output=PyResult<PyObject>>+Send>>
 }
 
 impl Test {
-    pub fn from(name: String, test: Pin<Box<dyn Future<Output=PyResult<PyObject>>+Send>>) -> Self {
-        Self { name, test }
+    pub fn from(name: String, module_name: String, test: Pin<Box<dyn Future<Output=PyResult<PyObject>>+Send>>) -> Self {
+        Self { name, module_name, test }
     }
 
     pub async fn run(self) -> TestResult {

@@ -3,9 +3,7 @@ use crate::test::Test;
 use pyo3::exceptions::PyException;
 use pyo3::prelude::*;
 use pyo3::{PyResult, Python};
-use std::future::Future;
 use std::path::PathBuf;
-use std::pin::Pin;
 
 pub fn modularise(path: PathBuf) -> PyResult<String> {
     if let Some(name) = path.to_str() {
@@ -26,6 +24,7 @@ pub fn modularise(path: PathBuf) -> PyResult<String> {
 pub async fn run_module(module: String, suite: &SuiteRunner) -> PyResult<()> {
     let name = module.split(".").last().unwrap().to_string();
     let tests: PyResult<Vec<Test>> = Python::with_gil(|py| {
+        let module_name = module.clone();
         let module = py.import(module)?;
         Ok(module
             .getattr("__dict__")?
@@ -36,6 +35,7 @@ pub async fn run_module(module: String, suite: &SuiteRunner) -> PyResult<()> {
                 if item.starts_with("test") {
                     Some(Test::from(
                         item.clone(),
+                        module_name.clone(),
                         Box::pin(
                             pyo3_async_runtimes::tokio::into_future(
                                 module.call_method0(&item).ok()?,
