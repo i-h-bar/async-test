@@ -33,8 +33,8 @@ impl SuiteRunner {
         let name = format!("{}: {}", test.module_name, test.name.clone());
         bar.set_message(name.clone());
         bar.enable_steady_tick(Duration::from_millis(100));
-        if test.name.len() > self.longest_name.load(Ordering::Relaxed) {
-            self.longest_name.swap(test.name.len(), Ordering::Relaxed);
+        if name.len() > self.longest_name.load(Ordering::Relaxed) {
+            self.longest_name.swap(name.len(), Ordering::Relaxed);
         }
 
         let result = test.run().await;
@@ -45,7 +45,7 @@ impl SuiteRunner {
             None => "",
         };
 
-        let padding_size = self.longest_name.load(Ordering::Relaxed) - result.name.len();
+        let padding_size = self.longest_name.load(Ordering::Relaxed) - name.len();
         let padding = (0..padding_size).map(|_| " ").collect::<String>();
 
         bar.set_message(format!(
