@@ -11,7 +11,6 @@ pub struct TestResult {
     pub tb: Option<String>,
 }
 
-
 pub fn cli_format(result: &TestResult) -> (&str, &str) {
     match result.outcome {
         Outcome::PASSED => ("\u{2705}", "\x1b[1;32m"),

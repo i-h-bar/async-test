@@ -1,6 +1,6 @@
 use crate::results::{Outcome, TestResult};
+use std::fmt::Display;
 
-#[derive(Debug)]
 pub struct Stats {
     pub total: usize,
     pub passed: Vec<String>,
@@ -40,5 +40,21 @@ impl Stats {
                 result.tb.unwrap_or_else(|| "Failed to get tb".to_string()),
             )),
         }
+    }
+}
+
+impl Display for Stats {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "\n\nTotal    - {}\n\nPassed   - {}\nFailed   - {}\nErrored  - {}\nTimedout - {}\nSkipped  - {}",
+            self.total,
+            self.passed.len(),
+            self.failed.len(),
+            self.errored.len(),
+            self.timeout.len(),
+            self.skipped.len()
+        )?;
+        Ok(())
     }
 }

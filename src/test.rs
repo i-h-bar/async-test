@@ -1,18 +1,26 @@
-use std::future::Future;
-use std::pin::Pin;
+use crate::results::{Outcome, TestResult};
 use pyo3::exceptions::PyAssertionError;
 use pyo3::prelude::*;
-use crate::results::{Outcome, TestResult};
+use std::future::Future;
+use std::pin::Pin;
 
 pub struct Test {
     pub name: String,
     pub module_name: String,
-    test: Pin<Box<dyn Future<Output=PyResult<PyObject>>+Send>>
+    test: Pin<Box<dyn Future<Output = PyResult<PyObject>> + Send>>,
 }
 
 impl Test {
-    pub fn from(name: String, module_name: String, test: Pin<Box<dyn Future<Output=PyResult<PyObject>>+Send>>) -> Self {
-        Self { name, module_name, test }
+    pub fn from(
+        name: String,
+        module_name: String,
+        test: Pin<Box<dyn Future<Output = PyResult<PyObject>> + Send>>,
+    ) -> Self {
+        Self {
+            name,
+            module_name,
+            test,
+        }
     }
 
     pub async fn run(self) -> TestResult {

@@ -54,7 +54,7 @@ pub async fn run_module(module: String, suite: &SuiteRunner) -> PyResult<()> {
         Ok(tests) => {
             futures::future::join_all(tests.into_iter().map(|test| suite.run_test(test))).await;
             ()
-        },
+        }
         Err(error) => suite.load_failed(name, error).await,
     }
 

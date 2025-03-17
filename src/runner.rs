@@ -1,19 +1,18 @@
-use std::ops::DerefMut;
-use std::sync::Arc;
-use std::sync::atomic::{AtomicUsize, Ordering};
-use std::time::Duration;
-use futures::lock::Mutex;
-use indicatif::{MultiProgress, ProgressBar};
-use pyo3::{PyErr, PyResult, Python};
 use crate::results::{cli_format, Outcome, TestResult};
 use crate::stats::Stats;
-use crate::test;
 use crate::test::{extract_tb, Test};
+use futures::lock::{Mutex, MutexGuard};
+use indicatif::{MultiProgress, ProgressBar};
+use pyo3::{PyErr, Python};
+use std::ops::DerefMut;
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::Arc;
+use std::time::Duration;
 
 pub struct SuiteRunner {
     stats: Arc<Mutex<Stats>>,
     longest_name: AtomicUsize,
-    progress_bar: MultiProgress
+    progress_bar: MultiProgress,
 }
 
 impl SuiteRunner {
@@ -24,11 +23,13 @@ impl SuiteRunner {
         Self {
             stats,
             longest_name: AtomicUsize::new(0),
-            progress_bar
+            progress_bar,
         }
     }
 
-    pub async fn run_test(&self, test: Test){
+    pub async fn run_test(&self, test: Test) {
+        self.stats.lock().await.deref_mut().total += 1;
+
         let bar = self.progress_bar.add(ProgressBar::new_spinner());
         let name = format!("{}: {}", test.module_name, test.name.clone());
         bar.set_message(name.clone());
@@ -86,5 +87,9 @@ impl SuiteRunner {
         ));
         bar.finish();
         self.stats.lock().await.deref_mut().update(result);
+    }
+
+    pub async fn stats(&self) -> MutexGuard<Stats> {
+        self.stats.lock().await
     }
 }
