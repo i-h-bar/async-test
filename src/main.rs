@@ -1,9 +1,8 @@
 use crate::stats::Stats;
 use crate::test::{modularise, run_module};
 use futures::lock::Mutex;
-use indicatif::{MultiProgress, ProgressBar};
+use indicatif::MultiProgress;
 use pyo3::prelude::*;
-use std::ops::Deref;
 use std::path::PathBuf;
 use std::sync::Arc;
 
