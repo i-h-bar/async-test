@@ -3,9 +3,10 @@ mod search;
 mod stats;
 mod test;
 
+pub mod cli;
+mod progress;
 mod results;
 mod runner;
-pub mod cli;
 
 use pyo3::prelude::*;
 

@@ -1,11 +1,11 @@
-use std::ops::Deref;
-use std::path::PathBuf;
-use std::time::Instant;
-use pyo3::{PyResult, Python};
-use pyo3::prelude::PyAnyMethods;
 use crate::module::{modularise, run_module};
 use crate::runner::SuiteRunner;
 use crate::search;
+use pyo3::prelude::PyAnyMethods;
+use pyo3::{PyResult, Python};
+use std::ops::Deref;
+use std::path::PathBuf;
+use std::time::Instant;
 
 pub async fn run() -> PyResult<()> {
     Python::with_gil(|py| {
