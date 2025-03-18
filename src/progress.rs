@@ -76,6 +76,7 @@ impl Bars {
 
         if length > self.longest {
             self.longest = length;
+            self.check_padding()
         }
 
         let spinner = self.bar_generator.add(ProgressBar::new_spinner());
