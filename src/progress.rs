@@ -7,11 +7,10 @@ use uuid::Uuid;
 struct Bar {
     spinner: ProgressBar,
     message: String,
-    length: usize,
     failure_reason: Option<String>,
     indicator: Option<&'static str>,
     colour: Option<&'static str>,
-    padding: String,
+    padding: usize,
 }
 
 pub struct Bars {
@@ -36,29 +35,34 @@ impl Bar {
             None => "".to_string(),
         };
 
-        self.padding = (0..longest - self.message.len()).map(|_| " ").collect::<String>();
+        self.padding = longest - self.message.len();
+        let padding = (0..self.padding).map(|_| " ").collect::<String>();
 
         self.spinner.set_message(format!(
             "{}{}{} - {}   {}\x1b[0m",
-            colour, self.message, self.padding, indicator, reason
+            colour, self.message, padding, indicator, reason
         ));
         self.spinner.finish();
     }
 
     fn update_padding(&mut self, new_length: usize) {
-        self.padding = (0..new_length).map(|_| " ").collect::<String>();
-        let reason = match self.failure_reason.as_ref() {
-            Some(failure_reason) => failure_reason.to_string(),
-            None => "".to_string(),
+        self.padding = new_length;
+
+        match self.failure_reason.as_ref() {
+            Some(failure_reason) => match self.colour {
+                Some(colour) => {
+                    let padding = (0..self.padding).map(|_| " ").collect::<String>();
+                    let indicator = self.indicator.unwrap_or_else(|| "");
+
+                    self.spinner.set_message(format!(
+                        "{}{}{} - {}   {}\x1b[0m",
+                        colour, self.message, padding, indicator, failure_reason
+                    ));
+                }
+                None => (),
+            },
+            None => (),
         };
-
-        let indicator = self.indicator.unwrap_or_else(|| "");
-
-        self.spinner.set_message(format!(
-            "{}{}{} - {}   {}\x1b[0m",
-            self.colour.expect("Colour"), self.message, self.padding, indicator, reason
-        ));
-        self.spinner.tick();
     }
 }
 
@@ -67,7 +71,7 @@ impl Bars {
         Self {
             bar_generator: MultiProgress::new(),
             bars: HashMap::new(),
-            longest: 0
+            longest: 0,
         }
     }
 
@@ -85,11 +89,10 @@ impl Bars {
         let bar = Bar {
             spinner,
             message,
-            length,
             failure_reason: None,
             indicator: None,
             colour: None,
-            padding: String::new(),
+            padding: 0,
         };
 
         self.bars.insert(uuid, bar);
@@ -106,7 +109,7 @@ impl Bars {
     fn check_padding(&mut self) {
         for (_, bar) in self.bars.iter_mut() {
             let new_length = self.longest - bar.message.len();
-            if bar.padding.len() > new_length {
+            if bar.padding < new_length {
                 bar.update_padding(new_length);
             }
         }
