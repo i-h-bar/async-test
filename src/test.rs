@@ -4,9 +4,7 @@ use futures::FutureExt;
 use futures::{pin_mut, select};
 use pyo3::exceptions::PyAssertionError;
 use pyo3::prelude::*;
-use pyo3_async_runtimes;
 use std::future::Future;
-use std::ops::Deref;
 use std::pin::Pin;
 use std::time::Duration;
 use uuid::Uuid;
@@ -42,9 +40,9 @@ impl Test {
     }
 
     pub async fn run(&mut self) -> TestResult {
-        let test = self.test.take().unwrap().fuse();
+        let mut test = self.test.take().expect("Ran an empty test").fuse();
         let timer = sleep(Duration::from_secs(5)).fuse();
-        pin_mut!(timer, test);
+        pin_mut!(timer);
 
         select! {
             outcome = test => {
