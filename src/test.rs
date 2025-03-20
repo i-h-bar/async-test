@@ -49,52 +49,50 @@ impl Test {
         select! {
             outcome = test => {
                 drop(test);
-                match outcome{
-            Ok(_) => TestResult {
-                name: Some(&self.name),
-                module_name: &self.module_name,
-                test_id: &self.id,
-                outcome: Outcome::PASSED,
-                message: None,
-                tb: None,
-            },
-            Err(error) => Python::with_gil(|py| {
-                if error.is_instance_of::<PyAssertionError>(py) {
-                    TestResult {
+                match outcome {
+                    Ok(_) => TestResult {
                         name: Some(&self.name),
                         module_name: &self.module_name,
                         test_id: &self.id,
-                        outcome: Outcome::FAILED,
-                        message: Some(error.to_string()),
-                        tb: extract_tb(&error, py),
-                    }
-                } else {
-                    TestResult {
-                        name: Some(&self.name),
-                        module_name: &self.module_name,
-                        test_id: &self.id,
-                        outcome: Outcome::ERRORED,
-                        message: Some(error.to_string()),
-                        tb: extract_tb(&error, py),
-                    }
+                        outcome: Outcome::PASSED,
+                        message: None,
+                        tb: None,
+                    },
+                    Err(error) => Python::with_gil(|py| {
+                        if error.is_instance_of::<PyAssertionError>(py) {
+                            TestResult {
+                                name: Some(&self.name),
+                                module_name: &self.module_name,
+                                test_id: &self.id,
+                                outcome: Outcome::FAILED,
+                                message: Some(error.to_string()),
+                                tb: extract_tb(&error, py),
+                            }
+                        } else {
+                            TestResult {
+                                name: Some(&self.name),
+                                module_name: &self.module_name,
+                                test_id: &self.id,
+                                outcome: Outcome::ERRORED,
+                                message: Some(error.to_string()),
+                                tb: extract_tb(&error, py),
+                            }
+                        }
+                    }),
                 }
-            }),
-        }
             },
             _ = timer => {
                     drop(test);
-                                TestResult {
-                test_id: &self.id,
-                name: Some(&self.name),
-                module_name: &self.module_name,
-                outcome: Outcome::TIMEOUT,
-                message: Some("Timeout after 5 seconds".to_string()),
-                tb: None
-            }
+                    TestResult {
+                        test_id: &self.id,
+                        name: Some(&self.name),
+                        module_name: &self.module_name,
+                        outcome: Outcome::TIMEOUT,
+                        message: Some("Timeout after 5 seconds".to_string()),
+                        tb: None
+                    }
             }
         }
-
-
     }
 }
 
