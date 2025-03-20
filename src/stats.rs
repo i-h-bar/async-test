@@ -7,7 +7,7 @@ pub struct Stats {
     pub failed: Vec<(String, String, String)>,
     pub errored: Vec<(String, String, String)>,
     pub skipped: Vec<(String, String, String)>,
-    pub timeout: Vec<(String, String, String)>,
+    pub timeout: Vec<(String, String)>,
 }
 
 impl Stats {
@@ -47,6 +47,12 @@ impl Stats {
                     .message
                     .unwrap_or_else(|| "Failed to get error".to_string()),
                 result.tb.unwrap_or_else(|| "Failed to get tb".to_string()),
+            )),
+            Outcome::TIMEOUT => self.timeout.push((
+                result.name.unwrap_or_else(|| "foo").to_string(),
+                result
+                    .message
+                    .unwrap_or_else(|| "Failed to get error".to_string()),
             )),
         }
     }

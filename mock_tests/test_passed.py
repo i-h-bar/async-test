@@ -8,3 +8,8 @@ async def test_case():
 async def test_extra():
     await asyncio.sleep(2)
     assert 2 == 2
+
+
+async def test_timeout():
+    await asyncio.sleep(6)
+    assert 2 == 2

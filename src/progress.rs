@@ -120,6 +120,7 @@ pub fn cli_format(result: &TestResult) -> (&'static str, &'static str) {
     match result.outcome {
         Outcome::PASSED => ("\u{2705}", "\x1b[1;32m"),
         Outcome::ERRORED => ("\u{1F6A8}", "\x1b[1;31m"),
+        Outcome::TIMEOUT => ("\u{1F550}", "\x1b[1;36m"),
         _ => ("\u{274c}", "\x1b[1;31m"),
     }
 }

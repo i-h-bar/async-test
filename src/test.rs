@@ -1,8 +1,14 @@
 use crate::results::{Outcome, TestResult};
+use async_std::task::sleep;
+use futures::FutureExt;
+use futures::{pin_mut, select};
 use pyo3::exceptions::PyAssertionError;
 use pyo3::prelude::*;
+use pyo3_async_runtimes;
 use std::future::Future;
+use std::ops::Deref;
 use std::pin::Pin;
+use std::time::Duration;
 use uuid::Uuid;
 
 pub struct Test {
@@ -36,8 +42,14 @@ impl Test {
     }
 
     pub async fn run(&mut self) -> TestResult {
-        let test = self.test.take().unwrap();
-        match test.await {
+        let test = self.test.take().unwrap().fuse();
+        let timer = sleep(Duration::from_secs(5)).fuse();
+        pin_mut!(timer, test);
+
+        select! {
+            outcome = test => {
+                drop(test);
+                match outcome{
             Ok(_) => TestResult {
                 name: Some(&self.name),
                 module_name: &self.module_name,
@@ -68,6 +80,21 @@ impl Test {
                 }
             }),
         }
+            },
+            _ = timer => {
+                    drop(test);
+                                TestResult {
+                test_id: &self.id,
+                name: Some(&self.name),
+                module_name: &self.module_name,
+                outcome: Outcome::TIMEOUT,
+                message: Some("Timeout after 5 seconds".to_string()),
+                tb: None
+            }
+            }
+        }
+
+
     }
 }
 
