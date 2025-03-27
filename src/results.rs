@@ -1,11 +1,16 @@
+use uuid::Uuid;
+
 pub enum Outcome {
     PASSED,
     FAILED,
     ERRORED,
+    TIMEOUT,
 }
 
-pub struct TestResult {
-    pub name: String,
+pub struct TestResult<'a> {
+    pub name: Option<&'a str>,
+    pub module_name: &'a str,
+    pub test_id: &'a Uuid,
     pub outcome: Outcome,
     pub message: Option<String>,
     pub tb: Option<String>,

@@ -17,6 +17,8 @@ default = ["extension-module"]
 
 [dependencies]
 pyo3-async-runtimes = { version = "0.24.0", features = ["attributes", "tokio-runtime"] }
-tokio = { version = "1.40", features = ["fs"] }
+tokio = { version = "1.44.1", features = ["fs"] }
 futures = "0.3.31"
 indicatif = "0.17.11"
+uuid = { version = "1.16.0", features = ["v4"] }
+async-std = "1.13.1"

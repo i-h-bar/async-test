@@ -1,120 +1,89 @@
 use crate::results::{Outcome, TestResult};
-use crate::stats::Stats;
-use futures::lock::Mutex;
-use indicatif::{MultiProgress, ProgressBar};
-use pyo3::exceptions::{PyAssertionError, PyException};
+use futures::FutureExt;
+use pyo3::exceptions::PyAssertionError;
 use pyo3::prelude::*;
-use pyo3::{PyResult, Python};
-use std::ops::DerefMut;
-use std::path::PathBuf;
-use std::sync::Arc;
+use std::future::Future;
+use std::pin::Pin;
 use std::time::Duration;
+use uuid::Uuid;
 
-pub fn modularise(path: PathBuf) -> PyResult<String> {
-    if let Some(name) = path.to_str() {
-        if let Some(stripped) = name.strip_prefix("./") {
-            if let Some(stripped) = stripped.strip_suffix(".py") {
-                Ok(stripped.replace("/", ".").replace("\\", "."))
-            } else {
-                Ok(stripped.replace("/", ".").replace("\\", "."))
-            }
-        } else {
-            Ok(name.replace("/", ".").replace("\\", "."))
+pub struct Test {
+    pub id: Uuid,
+    pub name: String,
+    pub module_name: String,
+    test: Option<Pin<Box<dyn Future<Output = PyResult<PyObject>> + Send>>>,
+}
+
+impl Test {
+    pub fn from(
+        name: String,
+        module_name: String,
+        test: Pin<Box<dyn Future<Output = PyResult<PyObject>> + Send>>,
+    ) -> Self {
+        Self {
+            id: Uuid::new_v4(),
+            name,
+            module_name,
+            test: Some(test),
         }
-    } else {
-        Err(PyException::new_err("path is not valid UTF-8"))
+    }
+
+    pub fn failed_load(module_name: String) -> Self {
+        Self {
+            id: Uuid::new_v4(),
+            module_name,
+            name: String::new(),
+            test: None,
+        }
+    }
+
+    pub async fn run(&mut self) -> TestResult {
+        let test = self.test.take().expect("Ran an empty test").fuse();
+
+        match tokio::time::timeout(Duration::from_secs(5), test).await {
+            Ok(outcome) => match outcome {
+                Ok(_) => TestResult {
+                    name: Some(&self.name),
+                    module_name: &self.module_name,
+                    test_id: &self.id,
+                    outcome: Outcome::PASSED,
+                    message: None,
+                    tb: None,
+                },
+                Err(error) => Python::with_gil(|py| {
+                    if error.is_instance_of::<PyAssertionError>(py) {
+                        TestResult {
+                            name: Some(&self.name),
+                            module_name: &self.module_name,
+                            test_id: &self.id,
+                            outcome: Outcome::FAILED,
+                            message: Some(error.to_string()),
+                            tb: extract_tb(&error, py),
+                        }
+                    } else {
+                        TestResult {
+                            name: Some(&self.name),
+                            module_name: &self.module_name,
+                            test_id: &self.id,
+                            outcome: Outcome::ERRORED,
+                            message: Some(error.to_string()),
+                            tb: extract_tb(&error, py),
+                        }
+                    }
+                }),
+            },
+            Err(_) => TestResult {
+                test_id: &self.id,
+                name: Some(&self.name),
+                module_name: &self.module_name,
+                outcome: Outcome::TIMEOUT,
+                message: Some("Timeout after 5 seconds".to_string()),
+                tb: None,
+            },
+        }
     }
 }
 
-fn extract_tb(error: &PyErr, py: Python) -> Option<String> {
+pub fn extract_tb(error: &PyErr, py: Python) -> Option<String> {
     error.traceback(py)?.format().ok()
-}
-
-pub async fn run_module(
-    module: String,
-    stats: Arc<Mutex<Stats>>,
-    multi_bar: &MultiProgress,
-    longest_name: usize,
-) -> PyResult<()> {
-    let name = module.split(".").last().unwrap().to_string();
-    let name_clone = name.clone();
-
-    let bar = multi_bar.add(ProgressBar::new_spinner());
-    bar.set_message(name_clone);
-    bar.enable_steady_tick(Duration::from_millis(100));
-
-    let test = Python::with_gil(|py| {
-        let module = py.import(module)?;
-        let tests: Vec<String> = module
-            .getattr("__dict__")?
-            .try_iter()?
-            .into_iter()
-            .filter_map(|item| {
-                let item = item.ok()?.extract::<String>().ok()?;
-                if item.starts_with("test") {
-                    Some(item)
-                } else {
-                    None
-                }
-            })
-            .collect();
-        pyo3_async_runtimes::tokio::into_future(module.call_method0("test_case")?)
-    });
-
-    let result = match test {
-        Ok(test) => match test.await {
-            Ok(_) => TestResult {
-                name,
-                outcome: Outcome::PASSED,
-                message: None,
-                tb: None,
-            },
-            Err(error) => Python::with_gil(|py| {
-                if error.is_instance_of::<PyAssertionError>(py) {
-                    TestResult {
-                        name,
-                        outcome: Outcome::FAILED,
-                        message: Some(error.to_string()),
-                        tb: extract_tb(&error, py),
-                    }
-                } else {
-                    TestResult {
-                        name,
-                        outcome: Outcome::ERRORED,
-                        message: Some(error.to_string()),
-                        tb: extract_tb(&error, py),
-                    }
-                }
-            }),
-        },
-        Err(error) => Python::with_gil(|py| TestResult {
-            name,
-            outcome: Outcome::ERRORED,
-            message: Some(error.to_string()),
-            tb: extract_tb(&error, py),
-        }),
-    };
-
-    let (indicator, colour) = match result.outcome {
-        Outcome::PASSED => ("\u{2705}", "\x1b[1;32m"),
-        Outcome::ERRORED => ("\u{1F6A8}", "\x1b[1;31m"),
-        _ => ("\u{274c}", "\x1b[1;31m"),
-    };
-
-    let reason = match &result.message {
-        Some(reason) => reason,
-        None => "",
-    };
-
-    let padding_size = longest_name - result.name.len();
-    let padding = (0..padding_size).map(|_| " ").collect::<String>();
-
-    bar.set_message(format!(
-        "{}{}{} - {}   {}\x1b[0m",
-        colour, &result.name, padding, indicator, reason
-    ));
-    bar.finish();
-    stats.lock().await.deref_mut().update(result);
-
-    Ok(())
 }
