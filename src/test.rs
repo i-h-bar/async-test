@@ -1,7 +1,7 @@
 use crate::results::{Outcome, TestResult};
 use async_std::task::sleep;
 use futures::FutureExt;
-use futures::{pin_mut, select};
+use futures::pin_mut;
 use pyo3::exceptions::PyAssertionError;
 use pyo3::prelude::*;
 use std::future::Future;
@@ -13,14 +13,14 @@ pub struct Test {
     pub id: Uuid,
     pub name: String,
     pub module_name: String,
-    test: Option<Pin<Box<dyn Future<Output = PyResult<PyObject>> + Send>>>,
+    test: Option<Pin<Box<dyn Future<Output=PyResult<PyObject>> + Send>>>,
 }
 
 impl Test {
     pub fn from(
         name: String,
         module_name: String,
-        test: Pin<Box<dyn Future<Output = PyResult<PyObject>> + Send>>,
+        test: Pin<Box<dyn Future<Output=PyResult<PyObject>> + Send>>,
     ) -> Self {
         Self {
             id: Uuid::new_v4(),
@@ -40,13 +40,10 @@ impl Test {
     }
 
     pub async fn run(&mut self) -> TestResult {
-        let mut test = self.test.take().expect("Ran an empty test").fuse();
-        let timer = sleep(Duration::from_secs(5)).fuse();
-        pin_mut!(timer);
+        let test = self.test.take().expect("Ran an empty test").fuse();
 
-        select! {
-            outcome = test => {
-                drop(test);
+        match tokio::time::timeout(Duration::from_secs(5), test).await {
+            Ok(outcome) => {
                 match outcome {
                     Ok(_) => TestResult {
                         name: Some(&self.name),
@@ -78,17 +75,16 @@ impl Test {
                         }
                     }),
                 }
-            },
-            _ = timer => {
-                    drop(test);
-                    TestResult {
-                        test_id: &self.id,
-                        name: Some(&self.name),
-                        module_name: &self.module_name,
-                        outcome: Outcome::TIMEOUT,
-                        message: Some("Timeout after 5 seconds".to_string()),
-                        tb: None
-                    }
+            }
+            Err(_) => {
+                TestResult {
+                    test_id: &self.id,
+                    name: Some(&self.name),
+                    module_name: &self.module_name,
+                    outcome: Outcome::TIMEOUT,
+                    message: Some("Timeout after 5 seconds".to_string()),
+                    tb: None,
+                }
             }
         }
     }
