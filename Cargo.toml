@@ -8,7 +8,7 @@ name = "async_test"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies.pyo3]
-version = "0.24"
+version = "0.25.1"
 features = ["abi3"]
 
 [features]
@@ -16,9 +16,9 @@ extension-module = ["pyo3/extension-module"]
 default = ["extension-module"]
 
 [dependencies]
-pyo3-async-runtimes = { version = "0.24.0", features = ["attributes", "tokio-runtime"] }
-tokio = { version = "1.44.1", features = ["fs"] }
+pyo3-async-runtimes = { version = "0.25.0", features = ["attributes", "tokio-runtime"] }
+tokio = { version = "1.46.1", features = ["fs"] }
 futures = "0.3.31"
-indicatif = "0.17.11"
-uuid = { version = "1.16.0", features = ["v4"] }
+indicatif = "0.18.0"
+uuid = { version = "1.17.0", features = ["v4"] }
 async-std = "1.13.1"

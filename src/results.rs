@@ -5,6 +5,7 @@ pub enum Outcome {
     FAILED,
     ERRORED,
     TIMEOUT,
+    SKIPPED,
 }
 
 pub struct TestResult<'a> {
